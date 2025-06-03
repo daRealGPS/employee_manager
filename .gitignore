@@ -1,0 +1,41 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Docker
+*.tar
+
+# Secrets
+*.pem
+*.key
+*.p12
+
+# Coverage
+coverage/
+
+# Misc
+tmp/
+temp/
+
+*.stackdump

@@ -1,0 +1,41 @@
+# IDE
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Kotlin build cache
+.kotlin/
+
+# Local machine + env
+local.properties
+.gradle-local/
+.env
+.env.*
+*.local
+
+# Signing & secrets
+*.jks
+*.keystore
+signing/*
+**/google-services.json
+
+# Outputs
+*.apk
+*.aab
+outputs/
+captures/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+**/release/
+
+**/build/
+*.apk
+*.aab

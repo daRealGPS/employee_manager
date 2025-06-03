@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.PORT = '5001';
+process.env.JWT_SECRET = 'test-secret';
+process.env.FRONTEND_URL_DEV = 'http://localhost:5173';
+process.env.FRONTEND_URL_PROD = 'https://example.com';
+process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5433/employee_manager_test';
+process.env.GEOFENCE_LAT = '90';
+process.env.GEOFENCE_LNG = '90';
+process.env.GEOFENCE_RADIUS_M = '150';
+process.env.GEOFENCE_MAX_ACCURACY_M = '80';
