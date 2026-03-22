@@ -22,12 +22,16 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
+    console.log("CORS Origin:", origin);
+    console.log("Allowed:", allowedOrigins);
+
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-
+    
+    console.log("CORS BLOCKED:", origin);
     return callback(new AppError(403, "Not allowed by CORS"));
   },
   credentials: true,
