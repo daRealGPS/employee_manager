@@ -10,6 +10,7 @@ import ButtonPrimary from '../components/ButtonPrimary';
 import H2 from '../components/H2';
 import H1 from '../components/H1';
 import StatusPill from '../components/StatusPill';
+import { demoConfig } from '../util/demoConfig';
 import {
   tableBase,
   tableHeaderRow,
@@ -21,6 +22,7 @@ import type {
   EmployeesListResponse,
   AttendanceTodayResponse,
 } from "../util/apiTypes";
+import { clearSession } from '../util/auth';
 
 type FormTypes = 'create' | 'delete' | 'update';
 
@@ -46,23 +48,26 @@ interface APIResponse {
   employees?: Employee[];
 }
 
-type Status = 'idle' | 'success' | 'error'; 
+type Status = 'idle' | 'success' | 'error';
 
-interface FormMessages { 
+interface FormMessages {
   create: string;
   update: string;
   delete: string;
+  demoReset: string;
 }
 
-interface FormStatuses { 
+interface FormStatuses {
   create: Status;
   update: Status;
   delete: Status;
+  demoReset: Status;
 }
 
-interface LoadingState { 
+interface LoadingState {
   employees: boolean;
   attendance: boolean;
+  demoReset: boolean;
 }
 
 const initialCreateForm: CreateForm = {
@@ -86,22 +91,30 @@ export default function EmployeeManager() {
   const [updateForm, setUpdateForm] = useState<UpdateForm>(initialUpdateForm);
   const [attendanceMap, setAttendanceMap] = useState<Record<number, boolean>>({});
 
-  const [formMessages, setFormMessages] = useState<FormMessages>({ 
+  const [formMessages, setFormMessages] = useState<FormMessages>({
     create: '',
     update: '',
     delete: '',
+    demoReset: '',
   });
 
-  const [formStatuses, setFormStatuses] = useState<FormStatuses>({ 
+  const [formStatuses, setFormStatuses] = useState<FormStatuses>({
     create: 'idle',
     update: 'idle',
     delete: 'idle',
+    demoReset: 'idle',
   });
 
-  const [loading, setLoading] = useState<LoadingState>({ 
+  const [loading, setLoading] = useState<LoadingState>({
     employees: true,
     attendance: true,
+    demoReset: false,
   });
+
+  const handleLogout = () => {
+    clearSession();
+    navigate("/login", { replace: true });
+  };
 
   const handleCreateChange = (name: string, value: string) => {
     setCreateForm(f => ({ ...f, [name]: value }));
@@ -114,15 +127,15 @@ export default function EmployeeManager() {
       newUsername: '',
       newPassword: '',
     });
-    setFormFeedback('update', '', 'idle'); 
+    setFormFeedback('update', '', 'idle');
   };
 
   const handleUpdateChange = (name: string, value: string) => {
     setUpdateForm(f => ({ ...f, [name]: value }));
   };
 
-  const setFormFeedback = ( 
-    type: FormTypes,
+  const setFormFeedback = (
+    type: FormTypes | 'demoReset',
     message: string,
     status: Status
   ) => {
@@ -145,7 +158,7 @@ export default function EmployeeManager() {
     }
   };
 
-  const setLoadingKey = (key: keyof LoadingState, value: boolean) => { 
+  const setLoadingKey = (key: keyof LoadingState, value: boolean) => {
     setLoading(prev => ({
       ...prev,
       [key]: value,
@@ -153,7 +166,7 @@ export default function EmployeeManager() {
   };
 
   function resetForms(formType: FormTypes, isError: boolean) {
-    if (isError) return; 
+    if (isError) return;
     if (formType === 'create') {
       setCreateForm(initialCreateForm);
     } else if (formType === 'update') {
@@ -174,7 +187,7 @@ export default function EmployeeManager() {
         setEmployees([]);
         return;
       }
-      
+
       setEmployees(data.employees ?? []);
     } catch (err) {
       console.error('Failed to fetch employees', err);
@@ -209,6 +222,10 @@ export default function EmployeeManager() {
       setLoadingKey('attendance', false);
     }
   }
+
+  const refreshAll = async () => {
+    await Promise.all([fetchEmployees(), fetchTodayAttendance()]);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,21 +327,102 @@ export default function EmployeeManager() {
     }
   };
 
+  const handleDemoReset = async () => {
+    const confirmed = window.confirm(
+      'Reset the shared demo database? This will remove current demo data and restore the default demo state.'
+    );
+    if (!confirmed) return;
+
+    try {
+      setLoadingKey('demoReset', true);
+      const res = await post('/demo/reset', {});
+      setLoadingKey('demoReset', false);
+      if (!res) return;
+
+      const data: APIResponse = await res.json();
+      const isError = !!data.error;
+
+      setFormFeedback(
+        'demoReset',
+        data.message ?? data.error ?? '',
+        isError ? 'error' : 'success'
+      );
+
+      if (!isError) {
+        clearUpdateForm();
+        setCreateForm(initialCreateForm);
+        await refreshAll();
+      }
+    } catch (err) {
+      console.error('Failed to reset demo data', err);
+      setLoadingKey('demoReset', false);
+      setFormFeedback('demoReset', 'Unexpected error while resetting demo data', 'error');
+    }
+  };
+
   const clearUpdateForm = () => {
     setSelectedEmployeeId(null);
     setUpdateForm(initialUpdateForm);
   };
 
   useEffect(() => {
-    fetchEmployees();
-    fetchTodayAttendance();
+    void refreshAll();
   }, []);
 
   return (
     <main className="min-h-screen p-6 bg-gray-50 max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={handleLogout}
+          className="text-sm cursor-pointer text-gray-600 hover:text-red-600 underline"
+        >
+          Logout
+        </button>
+
+        <span className="text-xs text-gray-500">
+          Demo Mode
+        </span>
+      </div>
+
       <div className="w-full space-y-6">
         <H1>Employee Manager</H1>
       </div>
+
+      {demoConfig.enabled && (
+        <Card>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <H2>Public Demo Mode</H2>
+              <p className="text-sm text-gray-700 mt-2">
+                Shared employer login: <span className="font-medium">{demoConfig.username}</span> /{" "}
+                <span className="font-medium">{demoConfig.password}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Demo data is shared. Use reset to restore the default state.
+              </p>
+              {formMessages.demoReset && (
+                <p
+                  className={`mt-2 text-sm ${
+                    formStatuses.demoReset === 'error' ? 'text-red-500' : 'text-green-600'
+                  }`}
+                >
+                  {formMessages.demoReset}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <ButtonPrimary
+                type="button"
+                onClick={handleDemoReset}
+                disabled={loading.demoReset}
+              >
+                {loading.demoReset ? 'Resetting...' : 'Reset Demo Data'}
+              </ButtonPrimary>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <H2>Create Employee</H2>
@@ -435,8 +533,9 @@ export default function EmployeeManager() {
                             onClick={() => handleEditClick(emp)}
                           >
                             <MdEdit size={16} />
-                        </ActionButton>
+                          </ActionButton>
                         )}
+
                         <ActionButton
                           variant="danger"
                           onClick={() => handleDelete(emp.id)}
@@ -452,7 +551,6 @@ export default function EmployeeManager() {
           </div>
         )}
       </Card>
-
 
       {selectedEmployeeId !== null && (
         <Card>
@@ -497,7 +595,6 @@ export default function EmployeeManager() {
           </form>
         </Card>
       )}
-
     </main>
   );
 }

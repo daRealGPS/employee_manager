@@ -27,6 +27,24 @@ const login = async (req, res) => {
   }
 
   const user = rows[0];
+
+  if (
+    process.env.DEMO_MODE === "true" &&
+    user.username !== process.env.DEMO_EMPLOYER_USERNAME
+  ) {
+    auditLog({
+      req,
+      action: "auth.login.failure",
+      success: false,
+      statusCode: 401,
+      metadata: { reason: "demo_login_blocked" },
+      actorUserId: user.id,
+      actorRole: user.role,
+    });
+
+    throw new AppError(401, "Invalid credentials");
+  }
+
   const match = await bcrypt.compare(password, user.password);
 
   if (!match) {
@@ -39,12 +57,12 @@ const login = async (req, res) => {
       actorUserId: user.id,
       actorRole: user.role,
     });
-    
+
     throw new AppError(401, "Invalid credentials");
   }
 
   const token = jwt.sign(
-    { userId: user.id, role: user.role },
+    { userId: user.id, role: user.role, username: user.username },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
@@ -59,9 +77,7 @@ const login = async (req, res) => {
     actorRole: user.role,
   });
 
-  // default 200 status is fine for successful login
   res.json({ token });
 };
-
 
 module.exports = { login };

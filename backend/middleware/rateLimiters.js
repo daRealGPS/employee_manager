@@ -1,4 +1,4 @@
-const rateLimit = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const { auditLog } = require("../utils/audit");
 
 const auditRateLimitHit = (req, scope) => {
@@ -10,7 +10,7 @@ const auditRateLimitHit = (req, scope) => {
     success: false,
     statusCode: 429,
     metadata: { scope },
-  })
+  });
 };
 
 const loginLimiterPerIp = rateLimit({
@@ -29,9 +29,9 @@ const loginLimiterPerUsername = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
+  keyGenerator: req => {
     const u = String(req.body?.username ?? "").trim().toLowerCase();
-    return u ? `user:${u}` : rateLimit.ipKeyGenerator(req, res);
+    return u ? `user:${u}` : ipKeyGenerator(req.ip);
   },
   handler: (req, res) => {
     auditRateLimitHit(req, "login_per_username");
@@ -44,11 +44,11 @@ const attendanceLimiterPerUser = rateLimit({
   max: 2,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
+  keyGenerator: req => {
     if (req.user?.userId) {
       return `user:${req.user.userId}`;
     }
-    return rateLimit.ipKeyGenerator(req, res);
+    return ipKeyGenerator(req.ip);
   },
   handler: (req, res) => {
     auditRateLimitHit(req, "attendance_per_user");
@@ -61,15 +61,60 @@ const taskStatusLimiterPerUser = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req, res) => {
+  keyGenerator: req => {
     if (req.user?.userId) {
       return `user:${req.user.userId}`;
     }
-    return rateLimit.ipKeyGenerator(req, res);
+    return ipKeyGenerator(req.ip);
   },
   handler: (req, res) => {
     auditRateLimitHit(req, "task_status_per_user");
     res.status(429).json({ error: "Too many task updates. Try again later." });
+  },
+});
+
+const globalApiLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    auditRateLimitHit(req, "global_api");
+    res.status(429).json({ error: "Too many requests. Try again later." });
+  },
+});
+
+const employerWriteLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => {
+    if (req.user?.userId) {
+      return `user:${req.user.userId}`;
+    }
+    return ipKeyGenerator(req.ip);
+  },
+  handler: (req, res) => {
+    auditRateLimitHit(req, "employer_write");
+    res.status(429).json({ error: "Too many write actions. Try again later." });
+  },
+});
+
+const demoResetLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => {
+    if (req.user?.userId) {
+      return `user:${req.user.userId}`;
+    }
+    return ipKeyGenerator(req.ip);
+  },
+  handler: (req, res) => {
+    auditRateLimitHit(req, "demo_reset");
+    res.status(429).json({ error: "Too many reset attempts. Try again later." });
   },
 });
 
@@ -78,4 +123,7 @@ module.exports = {
   loginLimiterPerUsername,
   attendanceLimiterPerUser,
   taskStatusLimiterPerUser,
+  globalApiLimiter,
+  employerWriteLimiter,
+  demoResetLimiter,
 };

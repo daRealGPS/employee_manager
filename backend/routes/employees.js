@@ -1,4 +1,3 @@
-// routes/employees.js
 const express = require('express');
 const { body } = require('express-validator');
 const { verifyToken, isEmployer } = require('../middleware/auth');
@@ -11,6 +10,7 @@ const {
   updateEmployee
 } = require('../controllers/employeeController');
 const { asyncHandler } = require('../middleware/asyncHandler');
+const { employerWriteLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
@@ -18,6 +18,7 @@ router.post(
   '/create',
   verifyToken,
   isEmployer,
+  employerWriteLimiter,
   sanitizeFields(['username', 'password']),
   [
     body('username').trim().notEmpty().withMessage('Username is required'),
@@ -40,6 +41,7 @@ router.delete(
   '/delete',
   verifyToken,
   isEmployer,
+  employerWriteLimiter,
   [
     body('id').isInt().toInt().withMessage('ID must be an integer'),
   ],
@@ -51,8 +53,9 @@ router.put(
   '/update',
   verifyToken,
   isEmployer,
+  employerWriteLimiter,
   sanitizeFields(['username', 'newUsername', 'newPassword']),
-  [  
+  [
     body('id').isInt().toInt().withMessage('ID must be an integer'),
     body('username').trim().notEmpty().withMessage('Current username is required'),
     body('newUsername').optional().trim(),
