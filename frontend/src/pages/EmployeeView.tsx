@@ -191,16 +191,16 @@ export default function EmployeeView() {
   return (
     <main className="min-h-screen p-6 bg-gray-50 space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between">
-        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
+        <Link to="/dashboard" className="text-sm cursor-pointer text-gray-600 hover:text-blue-600 underline">
           Back to Dashboard
         </Link>
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2">
-        <H1>Attendance and Tasks</H1>
-        <p className=" text-gray-600">
+        <p className="text-xs text-gray-600">
           {username ? `Employee: ${username}` : id ? `Employee ID: ${id}` : ''}
         </p>
+      </div>
+
+      <div className="w-full space-y-6">
+        <H1>Attendance and Tasks</H1>
       </div>
 
       <Card>
@@ -258,7 +258,7 @@ export default function EmployeeView() {
               <tbody>
                 {tasks.map(task => (
                   <tr key={task.id} className={tableRow}>
-                    <td className={`${tableCell} break-all w-1/2`}>{task.description}</td>
+                    <td className={`${tableCell} w-1/2`}>{task.description}</td>
                     <td className={`${tableCell} w-1/4`}>
                       <StatusPill label={task.status} variant={task.status === 'pending' ? 'warning' : 'success'} />
                      </td>

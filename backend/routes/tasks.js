@@ -6,12 +6,13 @@ const { sanitizeFields } = require('../middleware/sanitizeFields');
 const { asyncHandler } = require("../middleware/asyncHandler");
 const { handleValidationErrors } = require('../middleware/validation');
 const { assignTask, getTasks, updateTaskStatus, deleteTask } = require('../controllers/taskController');
-const { taskStatusLimiterPerUser } = require("../middleware/rateLimiters");
+const { taskStatusLimiterPerUser, employerWriteLimiter } = require("../middleware/rateLimiters");
 
 router.post(
   '/assign',
   verifyToken,
   isEmployer,
+  employerWriteLimiter,
   sanitizeFields(['description']),
   [
     body('id').isInt().toInt().withMessage('ID must be an integer'),
@@ -26,7 +27,6 @@ router.get(
   verifyToken,
   [
     query('id').optional().isInt().toInt().withMessage('ID must be an integer'),
-    // when used by employee its optional
   ],
   handleValidationErrors,
   asyncHandler(getTasks)
@@ -49,6 +49,7 @@ router.delete(
   '/:taskId',
   verifyToken,
   isEmployer,
+  employerWriteLimiter,
   [
     param('taskId').isInt().toInt().withMessage('Task ID must be an integer'),
   ],

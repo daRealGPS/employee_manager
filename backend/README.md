@@ -1,19 +1,17 @@
 # Employee Manager Backend
 
-Node.js + Express API powering a small employer / employee management system.
+Node.js and Express API for a small employer and employee management system.
 
-The backend provides:
+Core responsibilities:
 
-- JWT authentication
-- role-based authorization
-- employee management
-- task assignment and tracking
+- JWT authentication and role-based authorization
+- employee creation, update, listing, and deletion
+- task assignment and employee task status updates
 - geofenced attendance recording
-- structured request logging
-- persistent audit logging
-- rate limiting and input validation
+- structured request logging and persistent audit logging
+- validation, sanitization, and rate limiting on sensitive routes
 
-The goal is a **defensive API** that records important actions and protects itself against common misuse patterns.
+The backend is built to enforce rules on the server instead of trusting the client. Examples include one attendance record per employee per day at the database level, per-user rate limits on task updates, and request IDs that tie request logs to audit log entries.
 
 ## Stack
 
@@ -87,7 +85,7 @@ Attendance submission fails if the geofence is not configured.
 
 ## Authentication
 
-Authentication uses **JWT tokens**.
+Authentication is based on short-lived JWTs returned by the login endpoint.
 
 Login endpoint:
 
@@ -119,7 +117,7 @@ userId
 role
 ```
 
-Expiration: 15 minutes
+Token expiry: 15 minutes
 
 ## Authorization
 
@@ -142,12 +140,9 @@ Employer-only routes use an additional guard middleware.
 POST /auth/login
 ```
 
-Rate limited:
+Login attempts are rate limited by both IP address and username.
 
-- per IP
-- per username
-
-Audit logs record both success and failure.
+Each login attempt is also written to the audit log, whether it succeeds or fails.
 
 ### Employees (employer only)
 
@@ -206,10 +201,10 @@ pending
 done
 ```
 
-Guardrails:
+Abuse controls:
 
-- tasks can only be toggled a limited number of times
-- per-user rate limits prevent spamming
+- task status can only be toggled a limited number of times
+- per-user rate limits reduce rapid repeat updates
 
 Delete task (employer):
 
@@ -270,11 +265,7 @@ Behavior:
 
 The ID is returned in the response header and included in all logs.
 
-This allows operators to correlate:
-
-- request logs
-- audit logs
-- database actions
+This makes it possible to trace one request across normal request logs and security-relevant audit entries during debugging or investigation.
 
 ## Request logging
 
@@ -289,7 +280,7 @@ Fields include:
 - latency_ms
 - user_id
 
-This makes the logs machine-parseable and easy to ingest into log systems.
+The format is meant to be easy to filter, search, and ship into external logging systems later.
 
 ## Audit logging
 
@@ -315,7 +306,7 @@ Audit entries contain:
 - user agent
 - optional metadata JSON
 
-This creates a traceable history of sensitive operations.
+That gives the system an investigation trail for sensitive operations instead of relying only on normal request logs.
 
 ## Input validation
 
@@ -346,7 +337,7 @@ This prevents injection into downstream systems or logs.
 
 ## Rate limiting
 
-Rate limits reduce brute force and abuse.
+Rate limits are used to slow brute-force attempts and noisy repeat actions.
 
 Login:
 
@@ -396,17 +387,16 @@ The current test suite covers:
 - unauthorized access rejection
 - regression coverage for previously fixed controller error paths
 
-### Test philosophy
+### Why tests run locally
 
-The project does not expose public shared test credentials against hosted infrastructure.
-Tests are intentionally run against a **local isolated PostgreSQL test database** rather than the hosted Neon database.
+The test suite uses a local PostgreSQL database instead of the hosted Neon database.
 
-This avoids:
+This keeps tests:
 
-- consuming hosted credits
-- polluting development data
-- exposing shared public test credentials
-- flaky tests caused by shared remote state
+- isolated from shared development data
+- cheaper to run
+- safer, because no public shared test credentials are exposed
+- closer to real behavior than pure mocks, since route tests still exercise SQL, middleware, and constraints
 
 ### Test stack
 
@@ -463,13 +453,13 @@ For local test database setup and schema notes, see `db/README.md`.
 
 ## Known gaps
 
-This project intentionally keeps scope small.
+The backend is functional, but there are still clear gaps.
 
 Current gaps:
 
-- test coverage is still strongest around authentication and employee flows
-- tasks and attendance need broader automated coverage
+- automated coverage is strongest around authentication and employee flows
+- task and attendance flows need broader test coverage
 - no refresh token flow
-- secure photo upload pipeline is not implemented
-- stronger anti-location-spoofing protections are still needed
-- timezone handling is not yet configurable
+- attendance photo upload is not implemented yet
+- anti-location-spoofing protections need to be stronger
+- timezone handling is fixed rather than configurable

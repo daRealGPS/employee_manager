@@ -23,14 +23,14 @@ The app is intentionally minimal. It demonstrates a real mobile client consuming
 
 ## Architecture Overview
 
-The app follows a simple model:
+The current app uses a small MVP structure:
 
-- Screens are Compose functions
-- Navigation uses a small `NavHost`
-- JWT token is stored in DataStore
-- All API requests are direct OkHttp calls using the stored JWT
+- screens are written as Compose functions
+- navigation is handled by a lightweight `NavHost`
+- the JWT is stored in DataStore
+- API calls are made directly with OkHttp using the stored token
 
-There is no complex state architecture yet (no ViewModel layer, no repository abstraction). This is an MVP client built to validate the end-to-end system.
+There is no ViewModel or repository layer yet. That was a speed tradeoff to get the end-to-end login, task, and attendance flow working first.
 
 ## Environments
 
@@ -189,10 +189,7 @@ The app is defensive but intentionally simple:
 - API error responses are parsed as JSON when possible
 - UI shows short user-facing error messages without exposing stack traces
 
-401/403 behavior:
-
-- The backend can return 401/403 when JWT is missing/expired/invalid.
-- The current MVP does not globally intercept these and force logout automatically. This can be improved with a shared request helper.
+The current MVP does not yet have a shared authenticated client that automatically handles 401 or 403 responses by clearing the token and redirecting to login.
 
 ## Security Notes
 
@@ -206,7 +203,7 @@ Current limitations:
 - Attendance photo is mocked and not uploaded through a secure pipeline
 - Login currently uses last-known location. Attendance uses current high accuracy location.
 
-## Project Gaps (Intentional)
+## Project Gaps
 
 Not implemented yet:
 
@@ -221,8 +218,7 @@ Not implemented yet:
 High-impact upgrades if expanding this app:
 
 - Centralize API calls into a single authenticated client
-  - auto-handle 401/403 by clearing token and redirecting to login
-
+- auto-handle 401/403 by clearing token and redirecting to login
 - Add ViewModels for screen state and lifecycle safety
 - Replace mocked attendance photo with a real camera flow (CameraX) and secure upload
 - Add basic instrumentation tests for login and task update flow

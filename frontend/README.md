@@ -2,14 +2,9 @@
 
 React + TypeScript frontend for the Employee Manager system.
 
-The UI provides an employer interface to:
+This client is built for the employer role. It handles login, employee management, attendance review, and task assignment through the shared backend API.
 
-- authenticate using JWT
-- manage employees
-- monitor daily attendance
-- assign and manage tasks per employee
-
-The frontend is intentionally thin. All critical validation, authorization, and rate limiting are enforced by the backend API.
+The frontend keeps business rules light on purpose. It focuses on rendering, authenticated requests, routing, and user feedback, while the backend enforces validation, authorization, rate limits, and attendance rules.
 
 ## Stack
 
@@ -169,8 +164,9 @@ These methods:
 - prepend the API base URL
 - attach authorization headers
 - reuse the authenticated fetch wrapper
+- clears the session and redirects to /login when the backend returns 401 or 403
 
-This avoids duplicating fetch logic across components.
+That keeps request logic out of page components and avoids repeating fetch boilerplate across the app.
 
 ## Pages
 

@@ -20,16 +20,21 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000\"")
+            buildConfigField("String", "BASE_URL", "\"BASE_URL\"")
         }
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            buildConfigField("String", "BASE_URL", "\<BACKEND_URL\>")
+        buildTypes {
+            debug {
+                buildConfigField("String", "BASE_URL", "\"BASE_URL\"")
+            }
+            release {
+                isMinifyEnabled = true
+                isShrinkResources = true
+                proguardFiles(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
+                )
+                buildConfigField("String", "BASE_URL", "\"BASE_URL\"")
+            }
         }
     }
     compileOptions {
@@ -43,15 +48,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("KEYSTORE_FILE") ?: "your.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: error("KEYSTORE_PASSWORD missing")
-            keyPassword = System.getenv("KEY_PASSWORD") ?: error("KEY_PASSWORD missing")
-            keyAlias = System.getenv("KEY_ALIAS") ?: "your-key-alias"
-        }
     }
 }
 

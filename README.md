@@ -8,20 +8,44 @@ The system includes:
 - **Employer Web Dashboard** (React + TypeScript)
 - **Employee Mobile App** (Android / Kotlin / Jetpack Compose)
 
-Together they simulate a real small-business workflow where employers assign work and employees verify attendance through a location-aware mobile client.
+The project models a small-business workflow: employers create employees, assign tasks, and review attendance, while employees use the mobile app to view tasks and submit attendance from a real location.
+
+The emphasis is on backend enforcement and multi-client integration. The API handles role checks, rate limits, validation, audit logging, and geofence verification, while both clients consume the same backend with role-specific behavior.
+
+## Live Demo
+
+Demo credentials:
+
+Employer (Web Dashboard) at [https://employee-manager-liard.vercel.app/login](https://employee-manager-liard.vercel.app/login)
+
+- Username: demo
+- Password: demo123
+
+Employee (Android App) can be found in github releases
+
+- Use any employee from the dashboard employee list after logging in
+- Password: employee123
+
+Notes before trying the demo:
+
+- The backend is hosted on Render free tier. The first request may take up to a minute while the service wakes up.
+- Attendance submission depends on device GPS accuracy. If the reported accuracy is too low or the location is slightly outside the configured radius, the request may be rejected.
+- Public registration is disabled. Only demo accounts are available.
+- The demo environment is shared. Data may be modified by other users and can be reset from the dashboard.
+- API endpoints are rate limited and validated to prevent abuse and uncontrolled usage in a public demo environment.
+- The system uses a separate demo database and does not expose any real user data or credentials.
 
 ## Why this is more than a CRUD demo
 
-This project is designed to demonstrate system behavior, defensive backend design, and multi-client integration rather than just basic create-read-update-delete operations.
+This project goes beyond basic CRUD because the main work is in enforcement, traceability, and real request flow.
 
-Key architectural choices include:
+Notable design choices:
 
-- **backend as source of truth**, with both web and mobile clients consuming the same API
-- **database-enforced invariants**, such as unique usernames and one attendance record per employee per day
-- **defensive API design**, including validation, sanitization, rate limiting, and audit logging
-- **traceable operations**, using request IDs to correlate request logs and audit logs
-- **multi-client integration**, where different frontends consume the same backend with role-specific behavior
-- **geofenced attendance verification**, adding real-world constraints beyond ordinary CRUD flows
+- Both the web dashboard and Android app call the same backend API, but the server decides what each role is allowed to do.
+- Attendance is not just a form submit. The backend checks GPS accuracy, calculates distance from the configured work location, and rejects duplicate submissions for the same day through a PostgreSQL unique index.
+- Sensitive actions are traceable. Requests carry a request ID, structured request logs are emitted for every call, and audit log entries record actions such as login attempts, task assignment, attendance submission, and rate-limit violations.
+- Abuse controls exist at multiple layers. Input is validated and sanitized, login is rate limited by IP and username, and task status updates are rate limited per user.
+- The backend test suite runs against a local Dockerized PostgreSQL database instead of the hosted Neon database so the tests exercise real SQL behavior without exposing shared credentials or consuming hosted credits.
 
 ## System Overview
 
@@ -38,8 +62,7 @@ Employer Web Dashboard ─┐
            test DB)
 ```
 
-The backend is the **source of truth**.
-Both clients consume the same API and rely on the backend to enforce security and business rules.
+Both clients talk to the same API. The web dashboard focuses on employer operations, and the Android app focuses on employee task updates and attendance submission. Business rules are enforced on the server rather than duplicated across clients.
 
 ## Core Features
 
@@ -194,20 +217,15 @@ Tech stack:
 - express-rate-limit
 - express-validator
 
-Responsibilities:
+What the backend is responsible for:
 
-- authentication
-- authorization
-- task management
-- attendance verification
-- geofence calculations
-- audit logging
-- request tracing
+- authenticating users and enforcing employer versus employee permissions
+- managing employees and tasks
+- validating attendance submissions against geofence distance and reported GPS accuracy
+- recording structured request logs and persistent audit logs
+- enforcing core data rules through PostgreSQL constraints, including unique usernames and one attendance record per employee per day
 
-The database enforces key invariants such as:
-
-- unique usernames
-- one attendance record per user per day
+A few implementation details matter here. Login attempts are rate limited by both IP and username. Task status updates are rate limited per user. Requests carry a request ID so request logs and audit logs can be correlated when tracing a problem or investigating an action.
 
 ## Web Dashboard
 
@@ -376,24 +394,22 @@ The Android release build targets the deployed backend automatically via `BuildC
 
 ## Known Limitations
 
-The project intentionally focuses on backend architecture and system integration.
+This is still an MVP and some parts are deliberately unfinished.
 
-Current gaps:
+Current limitations:
 
-- automated coverage is currently strongest around backend authentication and employee flows
-- attendance and task flows need broader automated test coverage
-- no refresh token support
-- attendance photo pipeline is mocked
-- mobile networking is not yet centralized
-- frontend does not use a state management library
+- automated test coverage is strongest around authentication and employee-management flows
+- attendance and task flows still need broader automated tests
+- no refresh token flow
+- attendance photo handling is still mocked
+- mobile networking is functional but not yet centralized behind a stronger client layer
+- the frontend does not use a state management library
 
-## Future Improvements
+## Next Technical Priorities
 
-Possible extensions include:
-
-- broader automated coverage for attendance, task, and mobile flows
-- OpenAPI specification for shared API contracts
-- centralized mobile networking layer
-- refresh token authentication flow
-- secure photo uploads for attendance verification
-- background task synchronization on mobile
+- expand automated coverage for attendance, task, and mobile flows
+- define a shared API contract, likely with OpenAPI
+- centralize mobile networking and response handling
+- add refresh-token-based authentication
+- replace mocked attendance photo handling with a secure upload flow
+- support background sync or retry behavior on mobile where it makes sense

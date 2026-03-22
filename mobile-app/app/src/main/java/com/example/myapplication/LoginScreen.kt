@@ -76,6 +76,7 @@ fun LoginScreen(navController: NavController) {
                         }
                     }
                 } else {
+                    Log.d("employee", "location is:" + location);
                     loading = false
                     error = "Could not get location"
                 }
