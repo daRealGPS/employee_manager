@@ -29,7 +29,8 @@ const login = async (req, res) => {
   const user = rows[0];
 
   if (
-    process.env.DEMO_MODE === "true" &&
+    process.env.DEMO_MODE === "true" && 
+    user.role === "employer" &&
     user.username !== process.env.DEMO_EMPLOYER_USERNAME
   ) {
     auditLog({
